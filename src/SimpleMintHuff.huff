@@ -1,0 +1,197 @@
+// Imports
+#include "huffmate/tokens/ERC721.huff"
+#include "huffmate/auth/NonPayable.huff"
+#include "huffmate/data-structures/Hashmap.huff"
+
+/* Interface */ 
+#define function publicMint(uint256) payable returns ()
+
+#define function setBaseUri() nonpayable returns ()
+#define function tokenURI(uint256) view returns (string)
+
+#define function maxSupply() view returns (uint256)
+#define function maxMint() view returns (uint256)
+#define function price() view returns (uint256)
+
+#define function test(uint256) view returns (uint256)
+#define function owner() view returns (address)
+
+/* constants */
+#define constant MAX_SUPPLY = 0x64 // 100
+#define constant MAX_MINT = 0x0a // 10
+#define constant PRICE = 0x2386F26FC10000 // 0.01 ether
+
+/* Storage Slots */
+#define constant OWNER = FREE_STORAGE_POINTER()
+#define constant COUNTER = FREE_STORAGE_POINTER()
+#define constant MINTER = FREE_STORAGE_POINTER()
+
+#define constant VALUE = FREE_STORAGE_POINTER()
+
+/* Errors */
+#define error NotOwner()
+#define error NullQuantity()
+#define error ExceedsMaxMint()
+#define error ExceedsMaxSupply()
+#define error InsufficientFunds()
+
+/* Events */
+#define event Minted(address indexed, uint256)
+
+/* Methods */
+#define macro CONSTRUCTOR() = takes (0) returns (0) {
+    caller [OWNER] sstore
+}
+
+
+#define macro PUBLIC_MINT() = takes (0) returns (0) {
+    // Load the number of tokens to mint.
+    0x04 calldataload                       // [qty]
+    iszero null_amount jumpi                // [qty]
+    dup1                                    // [qty, qty]
+
+    // Load the current supply
+    [COUNTER] sload                         // [counter, qty, qty]
+    add                                     // [counter + qty, qty]
+    
+    // Check if maxSupply is reached
+    [MAX_SUPPLY]                            // [maxSupply, counter+qty, qty]
+    lt                                      // [maxSupply < counter+qty, qty]
+
+    // Check is user's maxMint is reached
+    is_full jumpi                           // [qty]
+    caller                                  // [msg.sender, qty]
+    [MINTER] LOAD_ELEMENT_FROM_KEYS(0x00)   // [minterMintedBalance, qty]
+    dup2                                    // [qty, minterMintedBalance, qty]
+    add                                     // [qty+minterMintedBalance, qty]
+    dup1                                    // [qty+minterMintedBalance, qty+minterMintedBalance, qty]
+    [MAX_MINT]                              // [maxMint, qty+minterMintedBalance, qty+minterMintedBalance, qty]
+    lt                                      // [maxMint < qty+minterMintedBalance, qty+minterMintedBalance, qty]
+    max_user_mint jumpi                     // [qty+minterMintedBalance, qty]
+
+    // check msg.value
+    dup2 [PRICE] mul                        // [qty*price, qty+minterMintedBalance, qty]
+    callvalue                               // [msg.value, qty*price, qty+minterMintedBalance, qty]
+    lt                                      // [msg.value < qty*price, qty+minterMintedBalance, qty]
+    not_enough_value jumpi                  // [qty+minterMintedBalance, qty]
+    
+    // store the new user's minted balance
+    [MINTER] STORE_ELEMENT_FROM_KEYS(0x00)  // [qty]
+    caller [COUNTER] sload                  // [counter, msg.sender, qty]
+    swap2                                   // [qty, msg.sender, counter]
+
+    // mint loop
+    0x00                                    // [i, qty, msg.sender, counter]
+    loop:
+        dup2 dup2                           // [i, qty, i, qty, msg.sender, counter]
+        eq exit jumpi                       // [i, qty, msg.sender, counter]
+        swap3                               // [counter, qty, msg.sender, i]
+        0x01 add                            // [counter++, qty, msg.sender, i]
+        dup1                                // [counter++, counter++, qty, msg.sender, i]
+        dup4                                // [msg.sender, counter++, counter++, qty, msg.sender, i]
+        _MINT()                             // [counter++, qty, msg.sender, i]
+        swap3                               // [i, qty, msg.sender, counter++]
+        0x01 add                            // [i++, qty, msg.sender, counter++]
+    loop jump
+    exit:                                   // [i, qty, msg.sender, counter]
+    
+    pop                                     // [qty, msg.sender, counter]
+    swap2                                   // [counter, qty, msg.sender]
+    [COUNTER] sstore                        // [qty, msg.sender]
+    swap1                                   // [msg.sender, qty]
+
+    // Emit the mint event
+    __EVENT_HASH(Minted)                    // [sig, msg.sender, qty]
+    0x20 0x00                               // [0, 32, sig, msg.sender, qty]
+    log2                                    // []
+
+    null_amount:                                  
+        __ERROR(NullQuantity)               // []
+        0x00 mstore
+        0x04 0x00 revert
+    
+    is_full:
+        __ERROR(ExceedsMaxSupply)
+        0x00 mstore
+        0x04 0x00 revert
+    
+    max_user_mint:
+        __ERROR(ExceedsMaxMint)
+        0x00 mstore
+        0x04 0x00 revert 
+
+    not_enough_value:
+        __ERROR(InsufficientFunds)
+        0x00 mstore
+        0x04 0x00 revert   
+}
+
+#define macro IS_OWNER() = takes (0) returns (0) {
+    caller              // [msg.sender]
+    [OWNER] sload       // [owner, msg.sender]
+    eq is_owner jumpi   // [owner == msg.sender]
+
+    // if not, revert
+    0x00 0x00 revert
+
+    is_owner:
+}
+
+#define macro TEST() = takes(0) returns (0) {
+    0x04 calldataload       // [value]
+    0x05
+    gt                      // [5 > value]
+    0x00 mstore
+    0x20 0x00 return
+}
+
+#define macro PRICE() = takes(0) returns (0) {
+    [PRICE] 0x00 mstore
+    0x20 0x00 return
+}
+
+#define macro MAX_MINT() = takes(0) returns (0) {
+    [MAX_MINT] 0x00 mstore
+    0x20 0x00 return
+}
+
+#define macro MAX_SUPPLY() = takes(0) returns (0) {
+    [MAX_SUPPLY] 0x00 mstore
+    0x20 0x00 return
+}
+
+#define macro OWNER() = takes (0) returns (0) {
+    // Load value from storage.
+    [OWNER] sload
+    0x00 mstore
+
+
+    // Return value
+    0x20 0x00 return
+}
+
+#define macro MAIN() = takes (0) returns (0) {
+    // Identify which function is being called.
+    0x00 calldataload 0xE0 shr
+    dup1 __FUNC_SIG(publicMint) eq mintJump jumpi
+    dup1 __FUNC_SIG(owner) eq ownerJump jumpi
+    dup1 __FUNC_SIG(price) eq priceJump jumpi
+    dup1 __FUNC_SIG(maxSupply) eq maxSupplyJump jumpi
+    dup1 __FUNC_SIG(maxMint) eq maxMintJump jumpi
+    dup1 __FUNC_SIG(test) eq testJump jumpi
+
+    mintJump:
+        PUBLIC_MINT()
+    ownerJump:
+        OWNER()
+    priceJump:
+        PRICE()
+    maxSupplyJump:
+        MAX_SUPPLY()
+    maxMintJump:
+        MAX_MINT()
+    testJump:
+        TEST()
+    
+    0x00 0x00 revert
+}
