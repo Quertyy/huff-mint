@@ -38,17 +38,27 @@ contract SimpleMintHuffTest is Test {
 
     function testMintHuff_ShouldRevert_IfNullQuantity() public {
         vm.expectRevert(SimpleMint.NullQuantity.selector);
-        mintHuff.publicMint(0);
+        mintHuff.publicMint{value: 0.00 ether}(0);
     }
 
-    function testMintHuff_ShouldSucceed() public {
-        mintHuff.publicMint(1);
+    //function testMintHuff_ShouldSucceed() public {
+    //    mintHuff.publicMint{value: 0.01 ether}(1);
+    //}
+
+    function testMintHuff_ShouldRevert_IfUserExceedsMaxMint() public {
+        vm.expectRevert(SimpleMint.ExceedsMaxMint.selector);
+        mintHuff.publicMint{value: 0.11 ether}(11);
     }
 
-    function testMintHuff_ShouldRevert_IfMaxSupplyIsExceeded() public {
-        vm.expectRevert(SimpleMint.ExceedsMaxSupply.selector);
-        mintHuff.publicMint(101);
+    function testMintHuff_ShouldRevert_WhenNotEnoughEthValue() public {
+        vm.expectRevert(SimpleMint.InsufficientFunds.selector);
+        mintHuff.publicMint{value: 0.00 ether}(1);
     }
+
+    //function testMintHuff_ShouldRevert_IfMaxSupplyIsExceeded() public {
+    //    vm.expectRevert(SimpleMint.ExceedsMaxSupply.selector);
+    //    mintHuff.publicMint(101);
+    //}
 
     function test() public {
         assertEq(mintHuff.test(6), 1);

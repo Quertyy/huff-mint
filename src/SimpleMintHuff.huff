@@ -50,11 +50,12 @@
     0x04 calldataload                       // [qty]
     dup1                                    // [qty, qty]
     iszero null_amount jumpi                // [qty]
+    dup1
 
     // Load the current supply
     [COUNTER] sload                         // [counter, qty, qty]
     add                                     // [counter + qty, qty]
-    
+     
     // Check if maxSupply is reached
     [MAX_SUPPLY]                            // [maxSupply, counter+qty, qty]
     lt                                      // [maxSupply < counter+qty, qty]
