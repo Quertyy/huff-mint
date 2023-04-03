@@ -33,20 +33,28 @@ contract SimpleMintHuffTest is Test {
         assertEq(mintHuff.price(), 0.01 ether);
         assertEq(mintHuff.maxMint(), 10);
         assertEq(mintHuff.maxSupply(), 100);
+        assertEq(mintHuff.counter(), 0);
     }
 
-    function testMintHuff_ShouldRevert_IfNullAmount() public {
-        vm.expectRevert();
+    function testMintHuff_ShouldRevert_IfNullQuantity() public {
+        vm.expectRevert(SimpleMint.NullQuantity.selector);
         mintHuff.publicMint(0);
     }
 
-    function testMintHuff() public {
+    function testMintHuff_ShouldSucceed() public {
         mintHuff.publicMint(1);
     }
 
     function testMintHuff_ShouldRevert_IfMaxSupplyIsExceeded() public {
-        //vm.expectRevert(SimpleMint.ExceedsMaxSupply.selector);
-        mintHuff.publicMint(21);
+        vm.expectRevert(SimpleMint.ExceedsMaxSupply.selector);
+        mintHuff.publicMint(101);
+    }
+
+    function test() public {
+        assertEq(mintHuff.test(6), 1);
+        assertEq(mintHuff.test(99), 1);
+        assertEq(mintHuff.test(100), 0);
+        assertEq(mintHuff.test(101), 0);
     }
 }
 
@@ -57,6 +65,7 @@ interface SimpleMintHuff {
     function price() external view returns (uint256);
     function maxMint() external view returns (uint256);
     function maxSupply() external view returns (uint256);
+    function counter() external view returns (uint256);
 
     function balanceOf(address account) external view returns (uint256);
     function ownerOf(uint256 tokenId) external view returns (address);
