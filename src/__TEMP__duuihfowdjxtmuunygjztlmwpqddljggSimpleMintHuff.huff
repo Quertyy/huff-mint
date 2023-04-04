@@ -1,3 +1,5 @@
+
+
 // Imports
 #include "huffmate/tokens/ERC721.huff"
 #include "huffmate/auth/NonPayable.huff"

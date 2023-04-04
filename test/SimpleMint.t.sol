@@ -29,6 +29,12 @@ contract SimpleMintHuffTest is Test {
         simpleMint = new SimpleMint("https://simplemint.com/");
     }
 
+    function testMint_ShouldSucceed() public {
+        vm.prank(users[0]);
+        simpleMint.mint{value: 0.02 ether}(2);
+        assertEq(simpleMint.balanceOf(users[0]), 2);
+    }
+
     function testMintHuff_ShouldSetRightValues_WhenDeployed() public {
         assertEq(mintHuff.price(), 0.01 ether);
         assertEq(mintHuff.maxMint(), 10);
@@ -41,9 +47,13 @@ contract SimpleMintHuffTest is Test {
         mintHuff.publicMint{value: 0.00 ether}(0);
     }
 
-    //function testMintHuff_ShouldSucceed() public {
-    //    mintHuff.publicMint{value: 0.01 ether}(1);
-    //}
+    function testMintHuff_ShouldSucceed() public {
+        vm.prank(users[0]);
+        mintHuff.publicMint{value: 0.02 ether}(2);
+        
+        assertEq(mintHuff.balanceOf(users[0]), 2);
+        assertEq(mintHuff.counter(), 2);
+    }
 
     function testMintHuff_ShouldRevert_IfUserExceedsMaxMint() public {
         vm.expectRevert(SimpleMint.ExceedsMaxMint.selector);
@@ -55,10 +65,10 @@ contract SimpleMintHuffTest is Test {
         mintHuff.publicMint{value: 0.00 ether}(1);
     }
 
-    //function testMintHuff_ShouldRevert_IfMaxSupplyIsExceeded() public {
-    //    vm.expectRevert(SimpleMint.ExceedsMaxSupply.selector);
-    //    mintHuff.publicMint(101);
-    //}
+    function testMintHuff_ShouldRevert_IfMaxSupplyIsExceeded() public {
+        vm.expectRevert(SimpleMint.ExceedsMaxSupply.selector);
+        mintHuff.publicMint(101);
+    }
 
     function test() public {
         assertEq(mintHuff.test(6), 1);

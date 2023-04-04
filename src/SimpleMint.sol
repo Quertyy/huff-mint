@@ -48,7 +48,8 @@ contract SimpleMint is ERC721 {
         minter[msg.sender] += qty;
 
         for (uint i = 0; i < qty; i++) {
-            _mint(msg.sender, currentCounter + 1);
+            currentCounter++;
+            _mint(msg.sender, currentCounter);
         } 
 
         counter = currentCounter;
