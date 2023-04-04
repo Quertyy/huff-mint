@@ -34,9 +34,6 @@ contract SimpleMint is ERC721 {
         baseURI = uri;
     }
 
-    function setBaseURI(string memory uri) external onlyOwner {
-        baseURI = uri;
-    }
 
     function mint(uint256 qty) external payable {
         uint256 currentCounter = counter;
@@ -57,7 +54,11 @@ contract SimpleMint is ERC721 {
     }
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        string memory _tokenURI = string(abi.encodePacked(baseURI, LibString.toString(tokenId),".json"));
-        return _tokenURI;
+        return string(abi.encodePacked(baseURI, LibString.toString(tokenId),".json"));
+    }
+
+    function withdraw() external onlyOwner {
+        (bool s,) = owner.call{value: address(this).balance}("");
+        require(s, "Withdraw failed");
     }
 }

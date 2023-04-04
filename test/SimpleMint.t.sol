@@ -20,7 +20,7 @@ contract SimpleMintHuffTest is Test {
 
     /// @dev Setup the testing environment.
     function setUp() public {
-        users = utils.createUsers(10);
+        users = utils.createUsers(11);
         owner = users[1];
         
         address impl = HuffDeployer.deploy("SimpleMintHuff");
@@ -50,12 +50,12 @@ contract SimpleMintHuffTest is Test {
     function testMintHuff_ShouldSucceed() public {
         vm.prank(users[0]);
         mintHuff.publicMint{value: 0.02 ether}(2);
-        
+
         assertEq(mintHuff.balanceOf(users[0]), 2);
         assertEq(mintHuff.counter(), 2);
     }
 
-    function testMintHuff_ShouldRevert_IfUserExceedsMaxMint() public {
+    function testMintHuff_ShouldRevert_WhenQuantityExceedsMaxMint() public {
         vm.expectRevert(SimpleMint.ExceedsMaxMint.selector);
         mintHuff.publicMint{value: 0.11 ether}(11);
     }
@@ -65,21 +65,42 @@ contract SimpleMintHuffTest is Test {
         mintHuff.publicMint{value: 0.00 ether}(1);
     }
 
+    function testMintHuff_ShouldSucceed_WhenUserMintsMaxMint() public {
+        vm.prank(users[0]);
+        mintHuff.publicMint{value: 0.10 ether}(10);
+
+        assertEq(mintHuff.balanceOf(users[0]), 10);
+    }
+
+    function testMintHuff_ShouldRevert_WhenSupplyIsSoldOut() public {
+        for(uint256 i = 0; i < 10; i++) {
+            vm.prank(users[i]);
+            mintHuff.publicMint{value: 0.10 ether}(10);
+        }
+        vm.prank(users[10]);
+        vm.expectRevert(SimpleMint.ExceedsMaxSupply.selector);
+        mintHuff.publicMint{value: 0.1 ether}(1);
+    }
+
+    function testMintHuff_ShouldRevert_WhenUserMintsMoreThanMaxMint() public {
+        vm.startPrank(users[0]);
+        mintHuff.publicMint{value: 0.10 ether}(10);
+
+        vm.expectRevert(SimpleMint.ExceedsMaxMint.selector);
+        mintHuff.publicMint{value: 0.1 ether}(1);
+        vm.stopPrank();
+    }
+
     function testMintHuff_ShouldRevert_IfMaxSupplyIsExceeded() public {
         vm.expectRevert(SimpleMint.ExceedsMaxSupply.selector);
         mintHuff.publicMint(101);
-    }
-
-    function test() public {
-        assertEq(mintHuff.test(6), 1);
-        assertEq(mintHuff.test(99), 1);
-        assertEq(mintHuff.test(100), 0);
-        assertEq(mintHuff.test(101), 0);
     }
 }
 
 interface SimpleMintHuff {
     function owner() external view returns (address);
+    function withdraw() external;
+    
     function publicMint(uint256) external payable;
 
     function price() external view returns (uint256);
@@ -89,9 +110,4 @@ interface SimpleMintHuff {
 
     function balanceOf(address account) external view returns (uint256);
     function ownerOf(uint256 tokenId) external view returns (address);
-
-    function setValue(uint256) external;
-    function getValue() external view returns (uint256);
-
-    function test(uint256) external view returns (uint256);
 }

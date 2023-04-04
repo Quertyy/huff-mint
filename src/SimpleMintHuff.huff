@@ -5,17 +5,17 @@
 
 /* Interface */ 
 #define function publicMint(uint256) payable returns ()
-
 #define function setBaseUri() nonpayable returns ()
 #define function tokenURI(uint256) view returns (string)
 
+#define function counter() view returns (uint256)
 #define function maxSupply() view returns (uint256)
 #define function maxMint() view returns (uint256)
 #define function price() view returns (uint256)
 
-#define function test(uint256) view returns (uint256)
 #define function owner() view returns (address)
-#define function counter() view returns (uint256)
+#define function withdraw() view returns (address)
+
 
 /* constants */
 #define constant MAX_SUPPLY = 0x64 // 100
@@ -45,13 +45,16 @@
     caller [OWNER] sstore
 }
 
+#define macro WITHDRAW() = takes (0) returns (0) {
+    selfbalance         // [balance]
+}
 
 #define macro PUBLIC_MINT() = takes (0) returns (0) {
     // Load the number of tokens to mint.
     0x04 calldataload                       // [qty]
     dup1                                    // [qty, qty]
     iszero null_amount jumpi                // [qty]
-    dup1
+    dup1                                    // [qty, qty]
 
     // Load the current supply
     [COUNTER] sload                         // [counter, qty, qty]
@@ -78,8 +81,8 @@
     lt                                      // [msg.value < qty*price, qty+minterMintedBalance, qty]
     not_enough_value jumpi                  // [qty+minterMintedBalance, qty]
     
-    dup1
     // store the new user's minted balance
+    caller                                  // [msg.sender, qty+minterMintedBalance, qty]
     [MINTER] STORE_ELEMENT_FROM_KEYS(0x00)  // [qty]
     caller [COUNTER] sload                  // [counter, msg.sender, qty]
     swap2                                   // [qty, msg.sender, counter]
@@ -142,16 +145,6 @@
     is_owner:
 }
 
-#define macro TEST() = takes(0) returns (0) {
-    0x04 calldataload       // [value]
-    [COUNTER] sload         // [counter, value]
-    add                     // [counter + value]
-    [MAX_SUPPLY]            // [maxSupply, counter + value]
-    gt                      // [maxSupply > counter + value]
-    0x00 mstore
-    0x20 0x00 return
-}
-
 #define macro PRICE() = takes(0) returns (0) {
     [PRICE] 0x00 mstore
     0x20 0x00 return
@@ -186,16 +179,18 @@
     // Identify which function is being called.
     0x00 calldataload 0xE0 shr
     dup1 __FUNC_SIG(publicMint) eq mintJump jumpi
+    dup1 __FUNC_SIG(withdraw) eq withdrawJump jumpi
     dup1 __FUNC_SIG(owner) eq ownerJump jumpi
     dup1 __FUNC_SIG(price) eq priceJump jumpi
     dup1 __FUNC_SIG(maxSupply) eq maxSupplyJump jumpi
     dup1 __FUNC_SIG(maxMint) eq maxMintJump jumpi
-    dup1 __FUNC_SIG(test) eq testJump jumpi
     dup1 __FUNC_SIG(counter) eq counterJump jumpi
     dup1 __FUNC_SIG(balanceOf) eq balanceOfJump jumpi
 
     mintJump:
         PUBLIC_MINT()
+    withdrawJump:
+        WITHDRAW()
     ownerJump:
         OWNER()
     priceJump:
@@ -204,8 +199,6 @@
         MAX_SUPPLY()
     maxMintJump:
         MAX_MINT()
-    testJump:
-        TEST()
     counterJump:
         COUNTER()
     balanceOfJump:
