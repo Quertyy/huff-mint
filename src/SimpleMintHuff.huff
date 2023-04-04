@@ -1,9 +1,13 @@
-// Imports
+/*//////////////////////////////////////////////////////////////
+//                              IMPORTS
+//////////////////////////////////////////////////////////////*/
 #include "huffmate/tokens/ERC721.huff"
 #include "huffmate/auth/NonPayable.huff"
 #include "huffmate/data-structures/Hashmap.huff"
 
-/* Interface */ 
+/*//////////////////////////////////////////////////////////////
+//                             INTERFACE
+//////////////////////////////////////////////////////////////*/
 #define function publicMint(uint256) payable returns ()
 #define function setBaseUri() nonpayable returns ()
 #define function tokenURI(uint256) view returns (string)
@@ -17,37 +21,48 @@
 #define function withdraw() view returns (address)
 
 
-/* constants */
+/*//////////////////////////////////////////////////////////////
+//                             CONSTANTS
+//////////////////////////////////////////////////////////////*/
 #define constant MAX_SUPPLY = 0x64 // 100
 #define constant MAX_MINT = 0x0a // 10
 #define constant PRICE = 0x2386F26FC10000 // 0.01 ether
 
-/* Storage Slots */
+/*//////////////////////////////////////////////////////////////
+//                           STORAGE SLOTS
+//////////////////////////////////////////////////////////////*/
 #define constant OWNER = FREE_STORAGE_POINTER()
 #define constant COUNTER = FREE_STORAGE_POINTER()
 #define constant MINTER = FREE_STORAGE_POINTER()
 
 #define constant VALUE = FREE_STORAGE_POINTER()
 
-/* Errors */
+/*//////////////////////////////////////////////////////////////
+//                               ERRORS
+//////////////////////////////////////////////////////////////*/
 #define error NotOwner()
 #define error NullQuantity()
 #define error ExceedsMaxMint()
 #define error ExceedsMaxSupply()
 #define error InsufficientFunds()
 
-/* Events */
+/*//////////////////////////////////////////////////////////////
+//                               EVENTS
+//////////////////////////////////////////////////////////////*/
 #define event Minted(address indexed, uint256)
 
 
-/* Methods */
+/*//////////////////////////////////////////////////////////////
+//                            CONSTRUCTOR
+//////////////////////////////////////////////////////////////*/
 #define macro CONSTRUCTOR() = takes (0) returns (0) {
     caller [OWNER] sstore
 }
 
-#define macro WITHDRAW() = takes (0) returns (0) {
-    selfbalance         // [balance]
-}
+
+//#define macro WITHDRAW() = takes (0) returns (0) {
+//    selfbalance         // [balance]
+//}
 
 #define macro PUBLIC_MINT() = takes (0) returns (0) {
     // Load the number of tokens to mint.
@@ -145,24 +160,9 @@
     is_owner:
 }
 
-#define macro PRICE() = takes(0) returns (0) {
-    [PRICE] 0x00 mstore
-    0x20 0x00 return
-}
-
-#define macro COUNTER() = takes(0) returns (0) {
+#define macro COUNTER() = takes (0) returns (0) {
     [COUNTER] sload
     0x00 mstore
-    0x20 0x00 return
-}
-
-#define macro MAX_MINT() = takes(0) returns (0) {
-    [MAX_MINT] 0x00 mstore
-    0x20 0x00 return
-}
-
-#define macro MAX_SUPPLY() = takes(0) returns (0) {
-    [MAX_SUPPLY] 0x00 mstore
     0x20 0x00 return
 }
 
@@ -175,11 +175,20 @@
     0x20 0x00 return
 }
 
+#define macro VIEW() = takes (1) returns (0) {
+    // [ptr]
+    0x00 mstore
+    0x20 0x00 return
+}
+
+/*//////////////////////////////////////////////////////////////
+//                                MAIN
+//////////////////////////////////////////////////////////////*/
 #define macro MAIN() = takes (0) returns (0) {
     // Identify which function is being called.
     0x00 calldataload 0xE0 shr
     dup1 __FUNC_SIG(publicMint) eq mintJump jumpi
-    dup1 __FUNC_SIG(withdraw) eq withdrawJump jumpi
+    //dup1 __FUNC_SIG(withdraw) eq withdrawJump jumpi
     dup1 __FUNC_SIG(owner) eq ownerJump jumpi
     dup1 __FUNC_SIG(price) eq priceJump jumpi
     dup1 __FUNC_SIG(maxSupply) eq maxSupplyJump jumpi
@@ -187,22 +196,25 @@
     dup1 __FUNC_SIG(counter) eq counterJump jumpi
     dup1 __FUNC_SIG(balanceOf) eq balanceOfJump jumpi
 
+    0x00 0x00 revert
+
     mintJump:
         PUBLIC_MINT()
-    withdrawJump:
-        WITHDRAW()
+    //withdrawJump:
+    //    WITHDRAW()
     ownerJump:
         OWNER()
     priceJump:
-        PRICE()
+        [PRICE]
+        VIEW()
     maxSupplyJump:
-        MAX_SUPPLY()
+        [MAX_SUPPLY]
+        VIEW()
     maxMintJump:
-        MAX_MINT()
+        [MAX_MINT]
+        VIEW()
     counterJump:
         COUNTER()
     balanceOfJump:
         BALANCE_OF()
-    
-    0x00 0x00 revert
 }
