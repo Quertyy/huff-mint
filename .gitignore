@@ -11,6 +11,8 @@ out/
 
 lib
 
+src/__TEMP*
+
 # Vscode
 .vscode/
 
