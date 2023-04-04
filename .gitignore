@@ -9,9 +9,7 @@ node_modules/
 cache/
 out/
 
-lib/*/
 
-src/__TEMP*
 
 # Vscode
 .vscode/
